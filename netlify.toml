@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  VITE_SUPABASE_URL = "https://pzpoxcybheogkruvianx.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6cG94Y3liaGVvZ2tydXZpYW54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzODUwMTksImV4cCI6MjA5Mzk2MTAxOX0.tmoaIzFNNoPYKATv2Rl7knqfKSbAHVQnEcypYS7UkWc"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
