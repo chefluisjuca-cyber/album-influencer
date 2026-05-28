@@ -1,9 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const STRIPE_SECRET_KEY = "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";
-const PRICE_ID = "price_1TZQL3RNhmPZU507D7u0DBAg";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,13 +21,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Cria o cliente usando a service role para conseguir atualizar o perfil sem travar no RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Valida se o usuário está logado de verdade
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -39,27 +39,29 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { origin } = await req.json();
+    // 1. Atualiza o usuário para Premium imediatamente no banco de dados
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ is_premium: true })
+      .eq("id", user.id);
 
-    const stripe = new Stripe(STRIPE_SECRET_KEY, {
-      apiVersion: "2024-04-10",
-    });
+    if (updateError) throw updateError;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
-      line_items: [{ price: PRICE_ID, quantity: 1 }],
-      metadata: { user_id: user.id },
-      success_url: `${origin}?premium=success`,
-      cancel_url: `${origin}?premium=cancel`,
-    });
+    // 2. Pega o link do canal do YouTube que você vai cadastrar no painel do Supabase
+    // Se não tiver nenhum cadastrado, ele usa um link padrão
+    const youtubeLink = Deno.env.get("YOUTUBE_CHANNEL_LINK") || "https://youtube.com";
+    
+    // Cria o link final com o pop-up de confirmação de inscrição automática
+    const finalUrl = `${youtubeLink}?sub_confirmation=1`;
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    // Retorna a URL para o site abrir, fingindo que era a URL do Stripe!
+    return new Response(JSON.stringify({ url: finalUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("create-checkout error:", message);
+    console.error("Erro na inscrição do canal:", message);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
