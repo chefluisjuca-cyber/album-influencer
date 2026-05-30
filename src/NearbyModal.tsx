@@ -66,6 +66,7 @@ export default function NearbyModal({ userId, collection, onClose, onOpenProfile
   const [filterSticker, setFilterSticker] = React.useState<{ sectionCode: string; stickerId: string } | null>(null);
   const [stickerSearch, setStickerSearch] = React.useState('');
 
+  const collectionUrl = `${window.location.origin}${window.location.pathname}?uid=${userId}`;
   const missing = React.useMemo(() => missingStickers(collection), [collection]);
 
   const filteredMissing = React.useMemo(() => {
@@ -329,6 +330,7 @@ export default function NearbyModal({ userId, collection, onClose, onOpenProfile
                       theirCollection={userCollections[u.id] ?? null}
                       myCollection={collection}
                       filterSticker={filterSticker}
+                      collectionUrl={collectionUrl}
                     />
                   ))}
                 </div>
@@ -352,11 +354,13 @@ function NearbyUserCard({
   theirCollection,
   myCollection,
   filterSticker,
+  collectionUrl,
 }: {
   user: NearbyUser;
   theirCollection: CollectionMap | null;
   myCollection: CollectionMap;
   filterSticker: { sectionCode: string; stickerId: string } | null;
+  collectionUrl: string;
 }) {
   const [sending, setSending] = React.useState(false);
   const [sent, setSent]       = React.useState(false);

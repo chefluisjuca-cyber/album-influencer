@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Suas chaves novas copiadas do painel do Supabase
-const supabaseUrl     = 'https://hfashjfzzweszqpnusiw.supabase.co';
-const supabaseAnonKey = 'sb_publishable_Os0WJEl-oXd2VMEgPY5KdQ_wOOLyLMv';
+const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL || 'https://hfashjfzzweszqpnusiw.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Os0WJEl-oXd2VMEgPY5KdQ_wOOLyLMv';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
