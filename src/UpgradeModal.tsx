@@ -41,42 +41,48 @@ const FEATURE_DESC: Record<FeatureKey, string> = {
 interface Props {
   feature: FeatureKey;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function UpgradeModal({ feature, onClose }: Props) {
+export default function UpgradeModal({ feature, onClose, onSuccess }: Props) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError]     = React.useState('');
 
-  async function handleCheckout() {
+  async function handleUnlock(url: string) {
     setLoading(true);
     setError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setError('Faça login para continuar.'); setLoading(false); return; }
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ origin: window.location.origin }),
-        }
-      );
-
-      const json = await res.json();
-      if (!res.ok || !json.url) {
-        const msg = json.error ?? `Erro ${res.status} ao iniciar pagamento.`;
-        setError(msg);
-        console.error('Checkout error:', res.status, JSON.stringify(json));
+      if (!session || !session.user) {
+        setError('Faça login para continuar.');
         setLoading(false);
         return;
       }
 
-      window.location.href = json.url;
-    } catch {
+      // Open social media link in a new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+
+      // Immediately update profiles is_premium to true
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_premium: true })
+        .eq('id', session.user.id);
+
+      if (updateError) {
+        console.error('Error updating profile to premium:', updateError);
+        setError('Erro ao atualizar o perfil. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+
+      // Notify parent component to update state immediately
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      onClose();
+    } catch (err) {
+      console.error(err);
       setError('Erro de conexão. Tente novamente.');
       setLoading(false);
     }
@@ -155,32 +161,64 @@ export default function UpgradeModal({ feature, onClose }: Props) {
         </div>
 
         {/* CTA */}
-        <div className="px-6 pb-6 space-y-3">
+        <div className="px-6 pb-6 space-y-4">
           <div
             className="rounded-2xl p-4 text-center"
             style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}
           >
-            <p className="text-2xl font-extrabold text-white" style={{ letterSpacing: '-0.02em' }}>
-              R$ 13,99<span className="text-sm font-normal text-slate-500">/mês</span>
+            <p className="text-lg font-extrabold text-white leading-snug" style={{ letterSpacing: '-0.02em' }}>
+              Acesso restrito a seguidores
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">Cancele quando quiser</p>
+            <p className="text-xs text-slate-400 mt-1">Para liberar o conteúdo siga a gente nas redes sociais</p>
           </div>
 
           {error && (
             <p className="text-xs text-rose-400 text-center">{error}</p>
           )}
 
-          <button
-            className="w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
-            style={{ background: GOLD_GRAD, boxShadow: '0 4px 20px rgba(245,158,11,0.25)' }}
-            onClick={handleCheckout}
-            disabled={loading}
-          >
-            {loading
-              ? <span className="flex items-center justify-center gap-2"><Loader2 size={15} className="animate-spin" /> Aguarde...</span>
-              : <span className="flex items-center justify-center gap-2"><Crown size={15} /> Assinar Premium — R$ 13,99/mês</span>
-            }
-          </button>
+          <div className="flex flex-col gap-2.5">
+            <button
+              className="w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2.5"
+              style={{ background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', boxShadow: '0 4px 15px rgba(220,39,67,0.25)' }}
+              onClick={() => handleUnlock('https://www.instagram.com/vivendojuntossp/')}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Ativando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                  </svg>
+                  Seguir no Instagram
+                </>
+              )}
+            </button>
+
+            <button
+              className="w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2.5"
+              style={{ background: '#010101', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}
+              onClick={() => handleUnlock('https://www.tiktok.com/@vivendojuntos.sp')}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Ativando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .8.11V9.4a6.27 6.27 0 0 0-3.11.82 6.28 6.28 0 0 0-3.1 5.45 6.3 6.3 0 0 0 10.9 4.35 6.27 6.27 0 0 0 1.68-4.35V8.87a8.37 8.37 0 0 0 5.2 1.8V7.22a4.83 4.83 0 0 1-2.31-.53z"/>
+                  </svg>
+                  Seguir no TikTok
+                </>
+              )}
+            </button>
+          </div>
 
           <button
             onClick={onClose}

@@ -1665,7 +1665,7 @@ export default function App() {
       {showNearby  && user && (
         <NearbyModal userId={user.id} collection={collection} onClose={() => setShowNearby(false)} onOpenProfile={() => { setShowNearby(false); setShowProfile(true); }} />
       )}      {showReset && <ResetModal onConfirm={handleReset} onClose={() => setShowReset(false)} />}
-      {upgradeFeature && <UpgradeModal feature={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
+      {upgradeFeature && <UpgradeModal feature={upgradeFeature} onClose={() => setUpgradeFeature(null)} onSuccess={() => setIsPremium(true)} />}
       {showNotifications && user && (
         <NotificationsPanel
           userId={user.id}
